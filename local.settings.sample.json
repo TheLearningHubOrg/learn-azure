@@ -1,0 +1,11 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "COSMOS__accountEndpoint": "https://<your-account>.documents.azure.com:443/",
+    "COSMOS_DATABASE": "shop",
+    "COSMOS_CONTAINER": "orders",
+    "ORDERS_QUEUE": "orders"
+  }
+}

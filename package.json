@@ -1,0 +1,28 @@
+{
+  "name": "learn-azure",
+  "version": "1.0.0",
+  "description": "Master Microsoft Azure: core services, App Service and Functions, Storage, Cosmos DB, identity with Entra ID, networking, and Bicep infrastructure as code",
+  "private": true,
+  "type": "module",
+  "main": "dist/src/functions/*.js",
+  "author": "The Learning Hub",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && func start",
+    "dev": "tsc --watch",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
