@@ -17,7 +17,11 @@ npm ci
 npm test
 npm run build
 
-# 3. Publish. For Flex Consumption the package lands in the deployment blob container.
+# 3. Ship only runtime dependencies (typescript and tsx stay out of the package).
+#    The next `npm ci` restores the dev dependencies.
+npm prune --omit=dev
+
+# 4. Publish. For Flex Consumption the package lands in the deployment blob container.
 func azure functionapp publish "$APP"
 
 echo "Deployed to https://$(az functionapp show -g "$RG" -n "$APP" --query defaultHostName -o tsv)"

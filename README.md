@@ -290,7 +290,7 @@ The legacy Linux Consumption plan is on a retirement path, so new Linux apps sho
 
 ### 2.4 Writing a Function in TypeScript (Node.js v4 Programming Model)
 
-The v4 Node.js model registers functions in code with `app.http`, `app.storageQueue` and friends. No `function.json` files are needed. This is the exact pattern used in this repository's `src/functions/orders.ts`.
+The v4 Node.js model registers functions in code with `app.http`, `app.storageQueue` and friends. No `function.json` files are needed. The snippet below is a trimmed-down version of this repository's `src/functions/orders.ts`, which adds full validation, pricing and app-setting-driven queue names.
 
 ```typescript
 import { randomUUID } from 'node:crypto';
@@ -559,7 +559,9 @@ app.cosmosDB('projectOrders', {
   databaseName: 'shop',
   containerName: 'orders',
   leaseContainerName: 'leases',
-  createLeaseContainerIfNotExists: true,
+  // With Entra ID auth (local keys disabled) the data plane cannot create containers,
+  // so provision the 'leases' container in Bicep and leave this false.
+  createLeaseContainerIfNotExists: false,
   handler: async (documents: unknown[], ctx: InvocationContext) => {
     ctx.log(`received ${documents.length} changed orders`);
   },
@@ -612,7 +614,7 @@ az role assignment create \
 
 # 2. Grant a Function App's managed identity data access to ONE storage account
 PRINCIPAL_ID=$(az functionapp identity show -g rg-orders -n func-orders --query principalId -o tsv)
-STORAGE_ID=$(az storage account show -g rg-orders -n storders01 --query id -o tsv)
+STORAGE_ID=$(az storage account show -g rg-data -n storders01 --query id -o tsv)
 az role assignment create \
   --assignee-object-id "$PRINCIPAL_ID" --assignee-principal-type ServicePrincipal \
   --role "Storage Queue Data Contributor" \
@@ -748,7 +750,8 @@ az network vnet create -g rg-net -n vnet-orders-prod -l eastus2 \
 az network vnet subnet update -g rg-net --vnet-name vnet-orders-prod -n snet-app \
   --delegations Microsoft.App/environments
 az network vnet subnet create -g rg-net --vnet-name vnet-orders-prod -n snet-pe \
-  --address-prefixes 10.20.2.0/24
+  --address-prefixes 10.20.2.0/24 \
+  --private-endpoint-network-policies Enabled   # without this, NSG rules skip private endpoints
 
 # 2. NSG that only allows HTTPS from the app subnet into the endpoints subnet
 az network nsg create -g rg-net -n nsg-pe
@@ -1008,7 +1011,7 @@ This repository wraps the flow in four scripts:
 | Script | Purpose |
 | :--- | :--- |
 | `scripts/provision.sh <rg> [location]` | Builds the Bicep, creates the resource group, shows `what-if`, asks for confirmation, deploys |
-| `scripts/deploy-code.sh <rg>` | `npm ci`, `npm test`, `npm run build`, then `func azure functionapp publish` |
+| `scripts/deploy-code.sh <rg>` | `npm ci`, `npm test`, `npm run build`, `npm prune --omit=dev`, then `func azure functionapp publish` |
 | `scripts/smoke-test.sh <rg>` | Calls `/api/health`, posts a valid order (expects `202`) and an invalid one (expects `400`) |
 | `scripts/teardown.sh <rg>` | Lists the resources and deletes the group after you type its name |
 
@@ -1030,9 +1033,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: prod   # must match the federated credential subject
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -1131,7 +1134,9 @@ The `QueueMessageCount` metric covers every queue in the account, so in producti
 ```
 
 ```bash
-# Budget with an alert at 80% of a monthly limit for one resource group
+# Monthly budget for one resource group. This command sets the amount only:
+# add the 80% and 100% e-mail notifications in Cost Management, or declare a
+# Microsoft.Consumption/budgets resource with notifications in Bicep.
 az consumption budget create -g rg-learn-azure-dev \
   --budget-name learn-azure-dev-monthly \
   --amount 50 --category cost --time-grain monthly \

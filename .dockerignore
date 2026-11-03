@@ -1,0 +1,9 @@
+node_modules
+dist
+.git
+.azurite
+infra
+scripts
+local.settings.json
+.deploy-outputs.json
+*.md
